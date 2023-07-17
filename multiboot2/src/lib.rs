@@ -419,8 +419,7 @@ impl<'a> BootInformation<'a> {
     /// special handling is required. This is reflected by code-comments.
     ///
     /// ```no_run
-    /// use std::str::Utf8Error;
-    /// use multiboot2::{BootInformation, BootInformationHeader, Tag, TagTrait, TagType, TagTypeId};
+    /// use multiboot2::{BootInformation, BootInformationHeader, StringError, Tag, TagTrait, TagType, TagTypeId};
     ///
     /// #[repr(C)]
     /// #[derive(multiboot2::Pointee)] // Only needed for DSTs.
@@ -444,7 +443,7 @@ impl<'a> BootInformation<'a> {
     /// }
     ///
     /// impl CustomTag {
-    ///     fn name(&self) -> Result<&str, Utf8Error> {
+    ///     fn name(&self) -> Result<&str, StringError> {
     ///         Tag::get_dst_str_slice(&self.name)
     ///     }
     /// }
@@ -518,11 +517,19 @@ impl fmt::Debug for BootInformation<'_> {
     }
 }
 
+/// Reports errors associated with C string conversion
+#[derive(Display, Debug, PartialEq)]
+pub enum StringError {
+    #[display(fmt = "{_0}")]
+    Utf8Error(core::str::Utf8Error),
+    #[display(fmt = "Unterminated string")]
+    MissingNul,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::memory_map::MemoryAreaType;
-    use core::str::Utf8Error;
+    use crate::{memory_map::MemoryAreaType, StringError};
 
     /// Compile time test to check if the boot information is Send and Sync.
     /// This test is relevant to give library users flexebility in passing the
@@ -1602,7 +1609,7 @@ mod tests {
         }
 
         impl CustomTag {
-            fn name(&self) -> Result<&str, Utf8Error> {
+            fn name(&self) -> Result<&str, StringError> {
                 Tag::get_dst_str_slice(&self.name)
             }
         }

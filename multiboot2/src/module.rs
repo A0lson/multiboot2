@@ -1,8 +1,7 @@
-use crate::{Tag, TagIter, TagTrait, TagType, TagTypeId};
+use crate::{StringError, Tag, TagIter, TagTrait, TagType, TagTypeId};
 
 use core::fmt::{Debug, Formatter};
 use core::mem::size_of;
-use core::str::Utf8Error;
 
 #[cfg(feature = "builder")]
 use {crate::builder::BoxedDst, alloc::vec::Vec};
@@ -47,7 +46,7 @@ impl ModuleTag {
     /// contains  `"module2 /some_boot_module --test cmdline-option"`.
     ///
     /// If the function returns `Err` then perhaps the memory is invalid.
-    pub fn cmdline(&self) -> Result<&str, Utf8Error> {
+    pub fn cmdline(&self) -> Result<&str, StringError> {
         Tag::get_dst_str_slice(&self.cmdline)
     }
 

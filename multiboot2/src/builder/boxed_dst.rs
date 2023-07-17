@@ -103,7 +103,7 @@ impl<T: ?Sized + PartialEq> PartialEq for BoxedDst<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::TagType;
+    use crate::{StringError, TagType};
 
     const METADATA_SIZE: usize = 8;
 
@@ -116,7 +116,7 @@ mod tests {
     }
 
     impl CustomTag {
-        fn string(&self) -> Result<&str, core::str::Utf8Error> {
+        fn string(&self) -> Result<&str, StringError> {
             Tag::get_dst_str_slice(&self.string)
         }
     }
@@ -137,6 +137,6 @@ mod tests {
         let tag = BoxedDst::<CustomTag>::new(content.as_bytes());
         assert_eq!(tag.typ, CustomTag::ID);
         assert_eq!(tag.size as usize, METADATA_SIZE + content.len());
-        assert_eq!(tag.string(), Ok(content));
+        assert_eq!(tag.string(), Err(StringError::MissingNul));
     }
 }

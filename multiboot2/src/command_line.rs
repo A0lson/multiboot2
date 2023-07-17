@@ -1,6 +1,6 @@
 //! Module for [CommandLineTag].
 
-use crate::{Tag, TagTrait, TagType, TagTypeId};
+use crate::{StringError, Tag, TagTrait, TagType, TagTypeId};
 
 use core::fmt::{Debug, Formatter};
 use core::mem;
@@ -55,7 +55,7 @@ impl CommandLineTag {
     ///     assert_eq!(Ok("/bootarg"), command_line);
     /// }
     /// ```
-    pub fn cmdline(&self) -> Result<&str, str::Utf8Error> {
+    pub fn cmdline(&self) -> Result<&str, StringError> {
         Tag::get_dst_str_slice(&self.cmdline)
     }
 }

@@ -1,7 +1,7 @@
-use crate::{Tag, TagTrait, TagType, TagTypeId};
+use crate::{StringError, Tag, TagTrait, TagType, TagTypeId};
 use core::fmt::{Debug, Formatter};
 use core::mem::size_of;
-use core::str::Utf8Error;
+
 #[cfg(feature = "builder")]
 use {crate::builder::BoxedDst, alloc::vec::Vec};
 
@@ -45,7 +45,7 @@ impl BootLoaderNameTag {
     ///     assert_eq!(Ok("GRUB 2.02~beta3-5"), tag.name());
     /// }
     /// ```
-    pub fn name(&self) -> Result<&str, Utf8Error> {
+    pub fn name(&self) -> Result<&str, StringError> {
         Tag::get_dst_str_slice(&self.name)
     }
 }

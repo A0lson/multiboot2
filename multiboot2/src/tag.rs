@@ -2,11 +2,10 @@
 //!
 //! The relevant exports of this module is [`Tag`].
 
-use crate::{TagTrait, TagType, TagTypeId};
+use crate::{StringError, TagTrait, TagType, TagTypeId};
 use core::fmt;
 use core::fmt::{Debug, Formatter};
 use core::marker::PhantomData;
-use core::str::Utf8Error;
 
 /// Common base structure for all tags that can be passed via the Multiboot2
 /// Information Structure (MBI) to a Multiboot2 payload/program/kernel.
@@ -42,25 +41,10 @@ impl Tag {
     /// slice. This function parses this slice as [`str`] so that either a valid
     /// UTF-8 Rust string slice without a terminating null byte or an error is
     /// returned.
-    pub fn get_dst_str_slice(bytes: &[u8]) -> Result<&str, Utf8Error> {
-        if bytes.is_empty() {
-            // Very unlikely. A sane bootloader would omit the tag in this case.
-            // But better be safe.
-            return Ok("");
-        }
-
-        // Return without a trailing null byte. By spec, the null byte should
-        // always terminate the string. However, for safety, we do make an extra
-        // check.
-        let str_slice = if bytes.ends_with(&[b'\0']) {
-            let str_len = bytes.len() - 1;
-            &bytes[0..str_len]
-        } else {
-            // Unlikely that a bootloader doesn't follow the spec and does not
-            // add a terminating null byte.
-            bytes
-        };
-        core::str::from_utf8(str_slice)
+    pub fn get_dst_str_slice(bytes: &[u8]) -> Result<&str, StringError> {
+        core::ffi::CStr::from_bytes_until_nul(bytes)
+            .map_err(|_| StringError::MissingNul)
+            .and_then(|cstr| cstr.to_str().map_err(StringError::Utf8Error))
     }
 }
 
@@ -137,17 +121,22 @@ mod tests {
     #[test]
     fn test_get_dst_str_slice() {
         // unlikely case
-        assert_eq!(Ok(""), Tag::get_dst_str_slice(&[]));
+        assert_eq!(Err(StringError::MissingNul), Tag::get_dst_str_slice(&[]));
         // also unlikely case
         assert_eq!(Ok(""), Tag::get_dst_str_slice(&[b'\0']));
-        // unlikely case: missing null byte. but the lib can cope with that
-        assert_eq!(Ok("foobar"), Tag::get_dst_str_slice("foobar".as_bytes()));
+        // unlikely case: missing null byte. Multiboot2 spec says strings are nul-terminated
+        assert_eq!(
+            Err(StringError::MissingNul),
+            Tag::get_dst_str_slice(b"foobar")
+        );
         // test that the null bytes is not included in the string slice
-        assert_eq!(Ok("foobar"), Tag::get_dst_str_slice("foobar\0".as_bytes()));
+        assert_eq!(Ok("foobar"), Tag::get_dst_str_slice(b"foobar\0"));
+        // test that C-style null string termination works as expected
+        assert_eq!(Ok("foo"), Tag::get_dst_str_slice(b"foo\0bar"));
         // test invalid utf8
         assert!(matches!(
-            Tag::get_dst_str_slice(&[0xff, 0xff]),
-            Err(Utf8Error { .. })
+            Tag::get_dst_str_slice(&[0xff, 0xff, 0x00]),
+            Err(StringError::Utf8Error(_))
         ));
     }
 }
